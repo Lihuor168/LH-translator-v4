@@ -47,7 +47,13 @@ async def generate_tts_async(text, output_path):
     await communicate.save(output_path)
 
 def generate_tts(text, output_path):
-    asyncio.run(generate_tts_async(text, output_path))
+    try:
+        asyncio.run(generate_tts_async(text, output_path))
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(generate_tts_async(text, output_path))
+        loop.close()
 
 # -------------------------------------------------------------
 # STEP 1: Transcribe Video & Translate to Khmer SRT Subtitles
