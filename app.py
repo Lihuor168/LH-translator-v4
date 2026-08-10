@@ -6,6 +6,7 @@ import asyncio
 import subprocess
 import requests
 from flask import Flask, request, jsonify, send_from_directory, send_file
+import edge_tts
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 
@@ -78,7 +79,7 @@ def get_srt_translation():
     try:
         file.save(video_path)
 
-        srt_transcript = None
+        whisper_data = None
         working_key = None
         last_error = ""
 
@@ -90,12 +91,12 @@ def get_srt_translation():
                     files = {
                         "file": (file.filename, audio_file, file.mimetype or "video/mp4"),
                         "model": (None, "whisper-large-v3"),
-                        "response_format": (None, "srt")
+                        "response_format": (None, "verbose_json")
                     }
                     res_audio = requests.post(transcribe_url, headers=headers, files=files, timeout=120)
 
                 if res_audio.status_code == 200:
-                    srt_transcript = res_audio.text
+                    whisper_data = res_audio.json()
                     working_key = key
                     break
                 else:
@@ -104,18 +105,30 @@ def get_srt_translation():
                 last_error = str(ex)
                 continue
 
-        if not srt_transcript or not working_key:
+        if not whisper_data or not working_key:
             return jsonify({'error': f'Whisper Error: {last_error}'}), 500
+
+        segments = whisper_data.get('segments', [])
+        transcript_text = ""
+        for seg in segments:
+            start = seg.get('start', 0)
+            end = seg.get('end', 0)
+            text = seg.get('text', '')
+            transcript_text += f"[{start:.2f} --> {end:.2f}] {text}\n"
 
         chat_url = "https://api.groq.com/openai/v1/chat/completions"
         prompt = f"""You are a professional subtitle translator into Khmer.
-Translate the following SRT subtitles from {lang} to Khmer.
-Maintain the exact SRT timing format (00:00:00,000 --> 00:00:00,000).
+Translate the following transcribed segments from {lang} to Khmer.
+Convert them strictly into standard SRT format with timing like this:
+1
+00:00:01,000 --> 00:00:04,000
+អត្ថបទភាសាខ្មែរ
+
 Style: {style}.
 Output ONLY valid SRT blocks. No introductions, no commentary.
 
-Original SRT:
-{srt_transcript}
+Original Segments:
+{transcript_text}
 """
 
         payload = {
@@ -236,4 +249,4 @@ def render_dubbed_video():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
-                                                        
+        
