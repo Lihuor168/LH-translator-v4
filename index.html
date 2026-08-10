@@ -28,7 +28,6 @@
             gap: 15px;
         }
 
-        /* Top Header Card */
         .header-card {
             background: linear-gradient(135deg, #1d4ed8, #2563eb);
             color: white;
@@ -51,7 +50,6 @@
             line-height: 1.4;
         }
 
-        /* Form Card */
         .card {
             background: white;
             padding: 18px;
@@ -101,13 +99,62 @@
             padding: 10px 12px;
             border: 1px solid #cbd5e1;
             border-radius: 10px;
-            font-size: 14px;
+            font-size: 13px;
             background-color: white;
             outline: none;
         }
 
         select:focus, input[type="text"]:focus {
             border-color: #2563eb;
+        }
+
+        /* Key Management Section */
+        .key-input-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-add-key {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 0 14px;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 13px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .key-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 8px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .key-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f1f5f9;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-family: monospace;
+            border: 1px solid #e2e8f0;
+        }
+
+        .btn-del-key {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
         }
 
         .btn-submit {
@@ -135,8 +182,7 @@
             cursor: not-allowed;
         }
 
-        /* Output Box */
-        textarea {
+        textarea.output-box {
             width: 100%;
             height: 120px;
             padding: 10px;
@@ -182,13 +228,11 @@
 <body>
 
 <div class="container">
-    <!-- Header -->
     <div class="header-card">
         <h1>🎬 Khmer Story Translator</h1>
-        <p>V3 Mobile Cloud • Video ➔ AI Transcript ➔ Khmer Script</p>
+        <p>V3 Mobile Cloud • Key Management • Khmer Script</p>
     </div>
 
-    <!-- Upload & Config Form -->
     <form id="transForm" class="card">
         <div>
             <div class="card-title">📤 បញ្ចូលវីដេអូ</div>
@@ -219,9 +263,14 @@
             </select>
         </div>
 
+        <!-- ផ្នែកបន្ថែម និងគ្រប់គ្រង Key -->
         <div>
-            <label>🔑 Gemini API Key (ជម្រើស)</label>
-            <input type="text" id="apiKey" placeholder="បិទ API Key ទីនេះ បើមិនបានដាក់ក្នុង Render">
+            <label>🔑 បន្ថែម Groq API Key</label>
+            <div class="key-input-group">
+                <input type="text" id="singleKeyInput" placeholder="បិទ Key ទីនេះ (gsk_...)">
+                <button type="button" class="btn-add-key" onclick="addKey()">➕ រក្សាទុក</button>
+            </div>
+            <div class="key-list" id="keyListDisplay"></div>
         </div>
 
         <button type="submit" id="submitBtn" class="btn-submit">
@@ -229,16 +278,14 @@
         </button>
     </form>
 
-    <!-- Transcript Box -->
     <div class="card">
         <div class="card-title">📝 Transcript</div>
-        <textarea id="transcriptBox" placeholder="Transcript នឹងបង្ហាញនៅទីនេះ..." readonly></textarea>
+        <textarea id="transcriptBox" class="output-box" placeholder="Transcript នឹងបង្ហាញនៅទីនេះ..." readonly></textarea>
     </div>
 
-    <!-- Khmer Script Box -->
     <div class="card">
         <div class="card-title">🇰🇭 ស្គ្រីបខ្មែរ</div>
-        <textarea id="khmerScriptBox" placeholder="ស្គ្រីបខ្មែរ នឹងបង្ហាញនៅទីនេះ..."></textarea>
+        <textarea id="khmerScriptBox" class="output-box" placeholder="ស្គ្រីបខ្មែរ នឹងបង្ហាញនៅទីនេះ..."></textarea>
         
         <div class="btn-group">
             <button class="btn-action" onclick="copyScript()">📋 Copy</button>
@@ -247,18 +294,65 @@
     </div>
 
     <div class="footer-note">
-        🔐 API Key រក្សាទុកនៅ Render Environment មិនដាក់ក្នុង Browser/GitHub
+        ⚡ Key ទាំងអស់រក្សាទុកក្នុងទូរស័ព្ទរបស់អ្នករហូត។ AI នឹង Auto Switch ពេលមាន Error!
     </div>
 </div>
 
 <script>
+    let savedKeys = JSON.parse(localStorage.getItem('my_groq_key_array') || '[]');
+
+    document.addEventListener('DOMContentLoaded', () => {
+        renderKeyList();
+    });
+
+    function renderKeyList() {
+        const display = document.getElementById('keyListDisplay');
+        display.innerHTML = '';
+        if (savedKeys.length === 0) {
+            display.innerHTML = '<div class="sub-text" style="font-style: italic;">មិនទាន់មាន Key ត្រូវបាន Save ទេ</div>';
+            return;
+        }
+        savedKeys.forEach((key, index) => {
+            const maskedKey = key.length > 12 ? key.substring(0, 8) + '...' + key.substring(key.length - 4) : key;
+            const item = document.createElement('div');
+            item.className = 'key-item';
+            item.innerHTML = `
+                <span>🔑 Key #${index + 1}: ${maskedKey}</span>
+                <button type="button" class="btn-del-key" onclick="deleteKey(${index})">🗑️ លុប</button>
+            `;
+            display.appendChild(item);
+        });
+    }
+
+    function addKey() {
+        const input = document.getElementById('singleKeyInput');
+        const val = input.value.trim();
+        if (!val) {
+            alert("សូមបញ្ចូល API Key ជាមុនសិន!");
+            return;
+        }
+        if (savedKeys.includes(val)) {
+            alert("Key នេះមានក្នុងបញ្ជីរួចហើយ!");
+            return;
+        }
+        savedKeys.push(val);
+        localStorage.setItem('my_groq_key_array', JSON.stringify(savedKeys));
+        input.value = '';
+        renderKeyList();
+    }
+
+    function deleteKey(index) {
+        savedKeys.splice(index, 1);
+        localStorage.setItem('my_groq_key_array', JSON.stringify(savedKeys));
+        renderKeyList();
+    }
+
     document.getElementById('transForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         
         const fileInput = document.getElementById('videoFile');
         const lang = document.getElementById('sourceLang').value;
         const style = document.getElementById('scriptStyle').value;
-        const apiKey = document.getElementById('apiKey').value;
         const submitBtn = document.getElementById('submitBtn');
         const transcriptBox = document.getElementById('transcriptBox');
         const khmerScriptBox = document.getElementById('khmerScriptBox');
@@ -268,11 +362,13 @@
             return;
         }
 
+        const keysText = savedKeys.join(',');
+
         const formData = new FormData();
         formData.append('file', fileInput.files[0]);
         formData.append('lang', lang);
         formData.append('style', style);
-        formData.append('api_key', apiKey);
+        formData.append('api_key', keysText);
 
         submitBtn.disabled = true;
         submitBtn.innerText = "កំពុង Upload និងដំណើរការដោយ AI... ⏳";
