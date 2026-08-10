@@ -1,1 +1,46 @@
-<!doctype html><html lang="km"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Khmer Translator V4 Gemini</title><link rel="stylesheet" href="/static/style.css"></head><body><main><h1>🇰🇭 Khmer Translator <b>V4</b></h1><p>Powered by Gemini • Transcript • Translation • Khmer Script • SRT</p><form id="form"><label class="upload"><input id="file" name="file" type="file" accept=".mp4,.mkv,.mov,.avi,.webm,.mp3,.wav,.m4a,.aac,.flac,.ogg" required><strong>📁 ជ្រើសរើស Audio / Video</strong><small id="name">មិនទាន់បានជ្រើសរើស</small></label><h3>Output</h3><div class="langs"><label><input type="checkbox" name="languages" value="th"> 🇹🇭 Thai</label><label><input type="checkbox" name="languages" value="ko"> 🇰🇷 Korean</label><label><input type="checkbox" name="languages" value="ja"> 🇯🇵 Japanese</label><label><input type="checkbox" name="languages" value="km" checked> 🇰🇭 Khmer Script</label></div><button id="go">🚀 Start Gemini V4</button></form><div id="status"></div><section id="result" hidden><div id="downloads"></div><div id="tabs"></div><div id="text"></div></section></main><script src="/static/app.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Story Translator - បកប្រែរឿងនិទាន</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>📖 AI Story Translator (ខ្មែរ)</h1>
+        <p class="subtitle">ឧបករណ៍បកប្រែប្រលោមលោក និងរឿងនិទានដោយប្រើ AI</p>
+
+        <div class="controls">
+            <label for="source-lang">ភាសាដើម៖</label>
+            <select id="source-lang">
+                <option value="Auto-detect">ស្វែងរកអូតូ (Auto Detect)</option>
+                <option value="English">អង់គ្លេស (English)</option>
+                <option value="Chinese">ចិន (Chinese)</option>
+                <option value="Thai">ថៃ (Thai)</option>
+                <option value="Vietnamese">វៀតណាម (Vietnamese)</option>
+            </select>
+        </div>
+
+        <div class="editor-container">
+            <div class="box">
+                <h3>អត្ថបទដើម</h3>
+                <textarea id="input-text" placeholder="Paste សាច់រឿងដែលចង់បកប្រែនៅទីនេះ..."></textarea>
+            </div>
+            <div class="box">
+                <h3>អត្ថបទបកប្រែរួច (ខ្មែរ)</h3>
+                <textarea id="output-text" readonly placeholder="លទ្ធផលបកប្រែនឹងបង្ហាញនៅទីនេះ..."></textarea>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button id="translate-btn" onclick="translateStory()">🚀 ចាប់ផ្តើមបកប្រែ</button>
+            <button id="copy-btn" onclick="copyResult()">📋 ចម្លងអត្ថបទ</button>
+        </div>
+        
+        <div id="loading" class="hidden">កំពុងបកប្រែ... សូមរង់ចាំបន្តិច ⏳</div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
