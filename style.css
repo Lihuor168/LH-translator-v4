@@ -23,6 +23,27 @@ body {
 h1 { text-align: center; color: #4da6ff; margin-bottom: 5px; }
 .subtitle { text-align: center; color: #a0a0a0; margin-bottom: 25px; }
 
+.input-group {
+    margin-bottom: 20px;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #ffca28;
+    font-size: 14px;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 10px 12px;
+    background: #2a2a2a;
+    color: #00ff88;
+    border: 1px solid #444;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
 .upload-area {
     border: 2px dashed #4da6ff;
     border-radius: 8px;
@@ -30,7 +51,6 @@ h1 { text-align: center; color: #4da6ff; margin-bottom: 5px; }
     text-align: center;
     background: #252525;
     margin-bottom: 20px;
-    cursor: pointer;
 }
 
 .file-label span {
