@@ -3,42 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Story Translator - បកប្រែរឿងនិទាន</title>
+    <title>AI Video & Audio Translator</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <h1>📖 AI Story Translator (ខ្មែរ)</h1>
-        <p class="subtitle">ឧបករណ៍បកប្រែប្រលោមលោក និងរឿងនិទានដោយប្រើ AI</p>
+        <h1>🎬 AI Video & Audio Translator (ខ្មែរ)</h1>
+        <p class="subtitle">បញ្ចូលវីដេអូ ឬសំឡេង ដើម្បីបកប្រែជាអត្ថបទខ្មែរ</p>
 
-        <div class="controls">
-            <label for="source-lang">ភាសាដើម៖</label>
-            <select id="source-lang">
-                <option value="Auto-detect">ស្វែងរកអូតូ (Auto Detect)</option>
-                <option value="English">អង់គ្លេស (English)</option>
-                <option value="Chinese">ចិន (Chinese)</option>
-                <option value="Thai">ថៃ (Thai)</option>
-                <option value="Vietnamese">វៀតណាម (Vietnamese)</option>
-            </select>
+        <form id="upload-form">
+            <div class="upload-area">
+                <label for="media-file" class="file-label">
+                    <span>📁 ចុចជ្រើសរើស File វីដេអូ/សំឡេង (MP4, MP3, WAV...)</span>
+                    <input type="file" id="media-file" accept="video/*,audio/*" required onchange="showFileName()">
+                </label>
+                <p id="file-name-display"></p>
+            </div>
+
+            <div class="controls">
+                <label for="source-lang">ភាសាក្នុងវីដេអូ៖</label>
+                <select id="source-lang">
+                    <option value="th">ថៃ (Thai)</option>
+                    <option value="en">អង់គ្លេស (English)</option>
+                    <option value="ko">កូរ៉េ (Korean)</option>
+                    <option value="ja">ជប៉ុន (Japanese)</option>
+                    <option value="zh">ចិន (Chinese)</option>
+                    <option value="vi">វៀតណាម (Vietnamese)</option>
+                </select>
+            </div>
+
+            <button type="submit" id="submit-btn">🚀 ចាប់ផ្តើមបកប្រែ</button>
+        </form>
+
+        <div id="loading" class="hidden">
+            <div class="spinner"></div>
+            <p>កំពុង Upload និងបកប្រែដោយ AI... សូមរង់ចាំបន្តិច ⏳</p>
         </div>
 
-        <div class="editor-container">
-            <div class="box">
-                <h3>អត្ថបទដើម</h3>
-                <textarea id="input-text" placeholder="Paste សាច់រឿងដែលចង់បកប្រែនៅទីនេះ..."></textarea>
-            </div>
-            <div class="box">
-                <h3>អត្ថបទបកប្រែរួច (ខ្មែរ)</h3>
-                <textarea id="output-text" readonly placeholder="លទ្ធផលបកប្រែនឹងបង្ហាញនៅទីនេះ..."></textarea>
-            </div>
-        </div>
-
-        <div class="actions">
-            <button id="translate-btn" onclick="translateStory()">🚀 ចាប់ផ្តើមបកប្រែ</button>
+        <div id="result-box" class="hidden">
+            <h3>📝 លទ្ធផលបកប្រែជាភាសាខ្មែរ៖</h3>
+            <textarea id="output-text" readonly rows="12"></textarea>
             <button id="copy-btn" onclick="copyResult()">📋 ចម្លងអត្ថបទ</button>
         </div>
-        
-        <div id="loading" class="hidden">កំពុងបកប្រែ... សូមរង់ចាំបន្តិច ⏳</div>
     </div>
 
     <script src="app.js"></script>
