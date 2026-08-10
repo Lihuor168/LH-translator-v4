@@ -18,10 +18,8 @@ def serve_static(path):
     return send_from_directory('.', path)
 
 def parse_srt(srt_text):
-    """Parse SRT subtitles with robust regex."""
     blocks = re.split(r'\n\s*\n', srt_text.strip())
     subtitles = []
-    
     for block in blocks:
         lines = block.strip().split('\n')
         if len(lines) >= 3:
@@ -39,27 +37,27 @@ def parse_srt(srt_text):
     return subtitles
 
 def srt_time_to_seconds(srt_time):
-    """Convert SRT timestamp (00:01:23,456) to floating point seconds."""
     hours, minutes, seconds_ms = srt_time.split(':')
     seconds, milliseconds = seconds_ms.split(',')
     return int(hours) * 3600 + int(minutes) * 60 + int(seconds) + int(milliseconds) / 1000.0
 
 async def generate_tts_async(text, output_path):
-    """Generate audio using Edge TTS."""
     communicate = edge_tts.Communicate(text, "km-KH-PisethNeural")
     await communicate.save(output_path)
 
 def generate_tts(text, output_path):
-    """Synchronous wrapper for Edge TTS."""
     asyncio.run(generate_tts_async(text, output_path))
 
-@app.route('/process-video-dubbing', methods=['POST'])
-def process_video_dubbing():
+# -------------------------------------------------------------
+# STEP 1: Transcribe Video & Translate to Khmer SRT Subtitles
+# -------------------------------------------------------------
+@app.route('/get-srt-translation', methods=['POST'])
+def get_srt_translation():
     if 'file' not in request.files:
         return jsonify({'error': 'មិនមាន File ត្រូវបាន Upload ទេ'}), 400
 
     file = request.files['file']
-    lang = request.form.get('lang', 'Chinese')
+    lang = request.form.get('lang', 'English')
     style = request.form.get('style', 'សម្រាយរឿង YouTube')
     raw_keys = request.form.get('api_key', '').strip()
 
@@ -76,11 +74,10 @@ def process_video_dubbing():
 
     temp_dir = tempfile.mkdtemp()
     video_path = os.path.join(temp_dir, "input_video.mp4")
-    
+
     try:
         file.save(video_path)
 
-        # 1. Whisper Transcribe -> Get SRT with Timestamps
         srt_transcript = None
         working_key = None
         last_error = ""
@@ -88,7 +85,6 @@ def process_video_dubbing():
         for key in key_list:
             headers = {"Authorization": f"Bearer {key}"}
             transcribe_url = "https://api.groq.com/openai/v1/audio/transcriptions"
-            
             try:
                 with open(video_path, "rb") as audio_file:
                     files = {
@@ -109,9 +105,8 @@ def process_video_dubbing():
                 continue
 
         if not srt_transcript or not working_key:
-            return jsonify({'error': f'Whisper Transcription Error: {last_error}'}), 500
+            return jsonify({'error': f'Whisper Error: {last_error}'}), 500
 
-        # 2. Translate SRT into Khmer using Llama-3.3-70b
         chat_url = "https://api.groq.com/openai/v1/chat/completions"
         prompt = f"""You are a professional subtitle translator into Khmer.
 Translate the following SRT subtitles from {lang} to Khmer.
@@ -144,16 +139,40 @@ Original SRT:
 
         khmer_srt = res_chat.json()['choices'][0]['message']['content'].strip()
 
-        # Clean markdown codeblocks if LLM included them
         if khmer_srt.startswith("```"):
             khmer_srt = re.sub(r'^```[a-zA-Z]*\n', '', khmer_srt)
             khmer_srt = re.sub(r'\n```$', '', khmer_srt)
 
-        # 3. Parse Khmer SRT and Generate Audio Clips
+        return jsonify({'khmer_srt': khmer_srt})
+
+    except Exception as e:
+        return jsonify({'error': f'Server Error: {str(e)}'}), 500
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+# -------------------------------------------------------------
+# STEP 2: Generate TTS Audio & Merge into Video
+# -------------------------------------------------------------
+@app.route('/render-dubbed-video', methods=['POST'])
+def render_dubbed_video():
+    if 'file' not in request.files:
+        return jsonify({'error': 'មិនមាន File វីដេអូទេ'}), 400
+
+    file = request.files['file']
+    khmer_srt = request.form.get('khmer_srt', '').strip()
+
+    if not khmer_srt:
+        return jsonify({'error': 'មិនមានអត្ថបទ Subtitle/Timeline ទេ'}), 400
+
+    temp_dir = tempfile.mkdtemp()
+    video_path = os.path.join(temp_dir, "input_video.mp4")
+
+    try:
+        file.save(video_path)
         parsed_subs = parse_srt(khmer_srt)
-        
+
         if not parsed_subs:
-            return jsonify({'error': 'មិនអាចបកប្រែជា SRT Subtitle បានទេ'}), 500
+            return jsonify({'error': 'អត្ថបទ Subtitle ខុសទម្រង់ SRT'}), 400
 
         input_files = []
         filter_complex_parts = []
@@ -162,22 +181,20 @@ Original SRT:
         for sub in parsed_subs:
             if not sub['text'].strip():
                 continue
-            
+
             snippet_path = os.path.join(temp_dir, f"audio_{valid_audio_index}.mp3")
             generate_tts(sub['text'], snippet_path)
-            
+
             start_sec = srt_time_to_seconds(sub['start'])
             delay_ms = int(start_sec * 1000)
-            
+
             input_files.extend(['-i', snippet_path])
-            # Delay audio for timing alignment
             filter_complex_parts.append(f"[{valid_audio_index}:a]adelay={delay_ms}|{delay_ms}[a{valid_audio_index}];")
             valid_audio_index += 1
 
         if valid_audio_index == 0:
-            return jsonify({'error': 'គ្មានអត្ថបទត្រូវបង្កើតសំឡេងឡើយ'}), 500
+            return jsonify({'error': 'គ្មានអត្ថបទសម្រាប់បង្កើតសំឡេងឡើយ'}), 400
 
-        # 4. Merge Audio Clips with FFmpeg
         merged_audio_path = os.path.join(temp_dir, "final_dubbed_audio.mp3")
         inputs_tag = "".join([f"[a{i}]" for i in range(valid_audio_index)])
         filter_str = "".join(filter_complex_parts) + f"{inputs_tag}amix=inputs={valid_audio_index}:dropout_transition=0:normalize=0[outa]"
@@ -189,10 +206,9 @@ Original SRT:
             '-ar', '44100',
             merged_audio_path
         ]
-        
+
         subprocess.run(ffmpeg_audio_cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-        # 5. Merge New Khmer Audio into Original Video
         output_video_path = os.path.join(temp_dir, "dubbed_output.mp4")
         merge_cmd = [
             'ffmpeg', '-y',
@@ -205,10 +221,9 @@ Original SRT:
             '-shortest',
             output_video_path
         ]
-        
+
         subprocess.run(merge_cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-        # Send finished video back to user
         return send_file(output_video_path, mimetype='video/mp4', as_attachment=False, download_name="dubbed_video.mp4")
 
     except subprocess.CalledProcessError as spe:
@@ -216,10 +231,9 @@ Original SRT:
     except Exception as e:
         return jsonify({'error': f'Server Error: {str(e)}'}), 500
     finally:
-        # Clean up temporary directory to avoid filling up disk storage
         shutil.rmtree(temp_dir, ignore_errors=True)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
-    
+                                                        
