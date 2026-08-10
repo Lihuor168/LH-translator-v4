@@ -1,14 +1,13 @@
 import os
 import tempfile
 from flask import Flask, request, jsonify, send_from_directory
-import google.generativeai as genai
+from google import genai
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 
-# 🔑 System Default API Keys (ប្រើពេលអ្នកប្រើប្រាស់មិនបានវាយ Key ចូល)
+# 🔑 បញ្ចូល API Keys របស់អ្នកនៅទីនេះ (អាចប្រើ Key ទ្រង់ទ្រាយ AQ... ឬ AIza...)
 DEFAULT_API_KEYS = [
-    "AIzaSyYourFirstKeyHere001",
-    "AIzaSyYourSecondKeyHere002",
+    "AQ.Ab8RN6Lv...", # បញ្ចូល Key របស់អ្នកដែលផ្តើមដោយ AQ...
 ]
 
 LANG_MAP = {
@@ -41,8 +40,16 @@ def translate_video():
     if file.filename == '':
         return jsonify({'error': 'សូមជ្រើសរើស File'}), 400
 
-    # កំណត់ List នៃ API Key ត្រូវប្រើ (បើមាន Custom Key ប្រើ Custom Key មុន)
-    keys_to_try = [custom_key] if custom_key else DEFAULT_API_KEYS
+    # រៀបចំបញ្ជី Keys ត្រូវប្រើ
+    keys_to_try = []
+    if custom_key:
+        keys_to_try.append(custom_key)
+    
+    env_key = os.getenv("GEMINI_API_KEY")
+    if env_key:
+        keys_to_try.append(env_key)
+        
+    keys_to_try.extend(DEFAULT_API_KEYS)
 
     temp_path = None
     try:
@@ -62,19 +69,27 @@ def translate_video():
         last_error = None
 
         for api_key in keys_to_try:
-            if not api_key:
+            key_clean = api_key.strip()
+            if not key_clean:
                 continue
-            
+
             uploaded_file = None
             try:
-                genai.configure(api_key=api_key.strip())
-                uploaded_file = genai.upload_file(path=temp_path)
+                # ប្រើ SDK ថ្មីទើបគាំទ្រ Key ទ្រង់ទ្រាយ AQ...
+                client = genai.Client(api_key=key_clean)
+                
+                # Upload File ទៅ Gemini
+                uploaded_file = client.files.upload(file=temp_path)
 
-                model = genai.GenerativeModel('gemini-1.5-flash')
-                response = model.generate_content([uploaded_file, prompt])
+                # ហៅ Gemini 2.5 Flash
+                response = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=[uploaded_file, prompt]
+                )
 
+                # លុប File ចោលវិញ
                 try:
-                    genai.delete_file(uploaded_file.name)
+                    client.files.delete(name=uploaded_file.name)
                 except Exception:
                     pass
 
@@ -82,14 +97,14 @@ def translate_video():
 
             except Exception as e:
                 last_error = str(e)
-                if uploaded_file:
+                if uploaded_file and 'client' in locals():
                     try:
-                        genai.delete_file(uploaded_file.name)
+                        client.files.delete(name=uploaded_file.name)
                     except Exception:
                         pass
                 continue
 
-        return jsonify({'error': f'API Key មានបញ្ហា ឬមិនត្រឹមត្រូវ! កំហុស៖ {last_error}'}), 500
+        return jsonify({'error': f'កំហុសក្នុងការប្រើប្រាស់ API Key៖ {last_error}'}), 500
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
