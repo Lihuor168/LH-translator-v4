@@ -1,7 +1,7 @@
 import os
 import tempfile
 from flask import Flask, request, jsonify, send_from_directory
-from google import genai
+import google.generativeai as genai
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 
@@ -26,7 +26,7 @@ def translate_video():
     if file.filename == '':
         return jsonify({'error': 'សូមជ្រើសរើស File'}), 400
 
-    # យក API Key ពី Input ឬ Environment Variable លើ Render
+    # យក API Key ពី Input ឬ Environment Variable
     api_key = custom_key or os.getenv("GEMINI_API_KEY", "").strip()
 
     if not api_key:
@@ -41,11 +41,11 @@ def translate_video():
             file.save(tmp.name)
             temp_path = tmp.name
 
-        # ប្រើ Google GenAI Client ថ្មី
-        client = genai.Client(api_key=api_key)
+        # Configure API Key
+        genai.configure(api_key=api_key)
 
-        # Upload file ទៅ Google Gemini
-        uploaded_file = client.files.upload(file=temp_path)
+        # Upload file ទៅ Google Gemini API
+        uploaded_file = genai.upload_file(path=temp_path)
 
         # Prompt
         prompt = f"""
@@ -59,11 +59,9 @@ def translate_video():
 (បកប្រែ និងរៀបចំអត្ថបទខាងលើជា "ភាសាខ្មែរ" តាមទម្រង់/ស្ទីល៖ {style} ឱ្យមានន័យពិរោះ ស្ទាត់ និងទាក់ទាញ)
 """
 
-        # Generate Response
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=[uploaded_file, prompt]
-        )
+        # ប្រើ Model 'gemini-1.5-flash' ដែលជា Standard និងលឿនបំផុត
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        response = model.generate_content([uploaded_file, prompt])
 
         full_text = response.text or ""
 
@@ -88,9 +86,9 @@ def translate_video():
 
     finally:
         # Clean up files
-        if uploaded_file and 'client' in locals():
+        if uploaded_file:
             try:
-                client.files.delete(name=uploaded_file.name)
+                genai.delete_file(uploaded_file.name)
             except Exception:
                 pass
         if temp_path and os.path.exists(temp_path):
