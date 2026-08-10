@@ -1,7 +1,7 @@
 import os
 import tempfile
+import requests
 from flask import Flask, request, jsonify, send_from_directory
-from groq import Groq
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 
@@ -21,54 +21,91 @@ def translate_video():
     file = request.files['file']
     lang = request.form.get('lang', 'Chinese')
     style = request.form.get('style', 'សម្រាយរឿង YouTube')
-    custom_key = request.form.get('api_key', '').strip()
+    raw_keys = request.form.get('api_key', '').strip()
 
     if file.filename == '':
         return jsonify({'error': 'សូមជ្រើសរើស File'}), 400
 
-    # យក API Key ពី Input ឬ Environment Variable
-    api_key = custom_key or os.getenv("GROQ_API_KEY", "").strip()
+    # យក Keys ពី Frontend ឬ Environment Variable ក្នុង Render
+    env_keys = os.getenv("GROQ_API_KEY", "").strip()
+    combined_keys_text = raw_keys or env_keys
 
-    if not api_key:
-        return jsonify({'error': 'មិនទាន់មាន Groq API Key ទេ! សូមបញ្ចូល Key (ផ្តើមដោយ gsk_...)'}), 400
+    if not combined_keys_text:
+        return jsonify({'error': 'មិនទាន់មាន Groq API Key ទេ! សូមបញ្ចូល Key យ៉ាងហោចណាស់ ១'}), 400
+
+    # បំបែក Key ចេញជា List
+    key_list = [k.strip() for k in combined_keys_text.replace('\n', ',').split(',') if k.strip()]
 
     temp_path = None
     try:
-        # Save temporary file
+        # រក្សាទុក File បណ្តោះអាសន្ន
         suffix = os.path.splitext(file.filename)[1]
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             file.save(tmp.name)
             temp_path = tmp.name
 
-        client = Groq(api_key=api_key)
+        transcript_text = None
+        working_key = None
+        last_error = ""
 
-        # ជំហានទី ១៖ ប្រើ Whisper Large V3 (Free) ដើម្បី Extract Transcript
-        with open(temp_path, "rb") as audio_file:
-            transcript_res = client.audio.transcriptions.create(
-                model="whisper-large-v3",
-                file=(os.path.basename(temp_path), audio_file.read())
-            )
-        
-        transcript_text = transcript_res.text
+        # 🔄 Auto Switch: លុប/ប្តូរទៅ Key បន្ទាប់ស្វ័យប្រវត្តិបើ Key មួយជួប Error
+        for key in key_list:
+            headers = {"Authorization": f"Bearer {key}"}
+            transcribe_url = "https://api.groq.com/openai/v1/audio/transcriptions"
+            
+            try:
+                with open(temp_path, "rb") as audio_file:
+                    files = {
+                        "file": (file.filename, audio_file, file.mimetype or "audio/mp3"),
+                        "model": (None, "whisper-large-v3")
+                    }
+                    res_audio = requests.post(transcribe_url, headers=headers, files=files, timeout=60)
 
-        # ជំហានទី ២៖ ប្រើ Llama 3 70B (Free) បកប្រែជាស្គ្រីបខ្មែរ
+                if res_audio.status_code == 200:
+                    transcript_text = res_audio.json().get("text", "")
+                    working_key = key
+                    break # ដើរជោគជ័យ បញ្ចប់ Loop
+                else:
+                    last_error = f"Key ({key[:8]}...): {res_audio.text}"
+            except Exception as ex:
+                last_error = str(ex)
+                continue
+
+        if not transcript_text or not working_key:
+            return jsonify({'error': f'Key ទាំងអស់មានបញ្ហា! Error ចុងក្រោយ៖ {last_error}'}), 500
+
+        # ជំហានទី ២៖ ប្រើ Key ដែលដើរនោះទៅបកប្រែជាស្គ្រីបខ្មែរជាមួយ Llama 3.3 70B
+        chat_url = "https://api.groq.com/openai/v1/chat/completions"
         prompt = f"""
-អ្នកគឺជាអ្នកសម្រាយរឿង និងបកប្រែវីដេអូអាជីព។
+អ្នកគឺជាអ្នកសម្រាយរឿង និងជាអ្នកសរសេរស្គ្រីបវីដេអូអាជីពភាសាខ្មែរ។
 ខាងក្រោមនេះជា Transcript ដើម (ភាសា {lang})៖
 "{transcript_text}"
 
-សូមបកប្រែ និងរៀបចំអត្ថបទខាងលើជា "ភាសាខ្មែរ" តាមទម្រង់/ស្ទីល៖ {style} ឱ្យមានន័យពិរោះ ស្ទាត់ ទាក់ទាញ និងសមស្របតាមសាច់រឿង។
+សូមធ្វើការបកប្រែ និងរៀបចំសរសេរឡើងវិញជា "ភាសាខ្មែរ" ឱ្យសមស្របតាមស្ទីល៖ {style} ដោយគោរពតាមលក្ខខណ្ឌដូចខាងក្រោម៖
+1. ប្រើប្រាស់ភាសាខ្មែរដែលរលូន ពិរោះ ងាយយល់ និងមានលំហូរធម្មជាតិ (មិនបកប្រែពាក្យទល់ពាក្យ ឬតាមរចនាសម្ព័ន្ធភាសាដើមត្រង់ៗពេកទេ)។
+2. សម្រួលពាក្យពេចន៍ឱ្យត្រូវតាមកថាខណ្ឌ និងបរិបទនៃសាច់រឿង (បើជាសាច់រឿង/សម្រាយរឿង ប្រើពាក្យទាក់ទាញអារម្មណ៍)។
+3. រក្សាឈ្មោះតួអង្គ ទីកន្លែង និងខ្លឹមសារសំខាន់ៗនៃសាច់រឿងឱ្យនៅដដែល។
 """
 
-        completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
+        payload = {
+            "model": "llama-3.3-70b-versatile",
+            "messages": [
                 {"role": "system", "content": "You are an expert translator and scriptwriter for YouTube videos. Respond in Khmer."},
                 {"role": "user", "content": prompt}
             ]
+        }
+
+        res_chat = requests.post(
+            chat_url, 
+            headers={"Authorization": f"Bearer {working_key}", "Content-Type": "application/json"}, 
+            json=payload,
+            timeout=60
         )
 
-        khmer_script = completion.choices[0].message.content
+        if res_chat.status_code != 200:
+            return jsonify({'error': f'Groq Translation Error: {res_chat.text}'}), 500
+
+        khmer_script = res_chat.json()['choices'][0]['message']['content']
 
         return jsonify({
             'transcript': transcript_text,
@@ -76,7 +113,7 @@ def translate_video():
         })
 
     except Exception as e:
-        return jsonify({'error': f'Groq Error: {str(e)}'}), 500
+        return jsonify({'error': f'Server Error: {str(e)}'}), 500
 
     finally:
         if temp_path and os.path.exists(temp_path):
