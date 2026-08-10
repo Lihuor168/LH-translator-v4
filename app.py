@@ -5,21 +5,6 @@ from google import genai
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 
-# 🔑 បញ្ចូល Gemini API Key (AQ...) របស់អ្នកនៅទីនេះ (អាចដាក់ច្រើនបាន)
-DEFAULT_API_KEYS = [
-    "AQ.Ab8RN6Lv...", # បិទ Key AQ. របស់អ្នកទី១ នៅទីនេះ
-    "AQ.Ab8RN6Lv...", # បិទ Key AQ. របស់អ្នកទី២ (បើមាន)
-]
-
-LANG_MAP = {
-    'th': 'Thai',
-    'en': 'English',
-    'ko': 'Korean',
-    'ja': 'Japanese',
-    'zh': 'Chinese',
-    'vi': 'Vietnamese'
-}
-
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')
@@ -34,84 +19,80 @@ def translate_video():
         return jsonify({'error': 'មិនមាន File ត្រូវបាន Upload ទេ'}), 400
 
     file = request.files['file']
-    lang_code = request.form.get('lang', 'th')
+    lang = request.form.get('lang', 'Chinese')
+    style = request.form.get('style', 'សម្រាយរឿង YouTube')
     custom_key = request.form.get('api_key', '').strip()
-    source_lang = LANG_MAP.get(lang_code, 'Thai')
 
     if file.filename == '':
         return jsonify({'error': 'សូមជ្រើសរើស File'}), 400
 
-    # រៀបចំ List API Key
-    keys_to_try = []
-    if custom_key:
-        keys_to_try.append(custom_key)
-    
-    env_key = os.getenv("GEMINI_API_KEY", "").strip()
-    if env_key:
-        keys_to_try.append(env_key)
-        
-    keys_to_try.extend(DEFAULT_API_KEYS)
+    # យក API Key ពី Input ឬ Environment Variable លើ Render
+    api_key = custom_key or os.getenv("GEMINI_API_KEY", "").strip()
+
+    if not api_key:
+        return jsonify({'error': 'មិនទាន់មាន API Key ទេ! សូមបញ្ចូល Key ឬដាក់ក្នុង Render Environment'}), 400
 
     temp_path = None
+    uploaded_file = None
     try:
-        # បង្កើត Temp file
+        # Save temp file
         suffix = os.path.splitext(file.filename)[1]
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             file.save(tmp.name)
             temp_path = tmp.name
 
+        # ប្រើ Google GenAI Client ថ្មី
+        client = genai.Client(api_key=api_key)
+
+        # Upload file ទៅ Google Gemini
+        uploaded_file = client.files.upload(file=temp_path)
+
+        # Prompt
         prompt = f"""
-អ្នកគឺជាអ្នកបកប្រែ និងដកស្រង់សំឡេងអាជីព។
-សូមស្ដាប់សំឡេង/វីដេអូដែលបាន Upload នេះ (ភាសាដើម៖ {source_lang}) រួច៖
-1. ស្ដាប់ និងបកប្រែខ្លឹមសារទាំងអស់មកជា "ភាសាខ្មែរ" ឱ្យមានលំហូររលូន និងពិរោះ។
-2. បើជាសាច់រឿង ឬកិច្ចសន្ទនា សូមរៀបចំជាកថាខណ្ឌ ឬរៀបតាមលំដាប់លំដោយឱ្យងាយអាន។
-3. រក្សាឈ្មោះតួអង្គ និងពាក្យសំខាន់ៗឱ្យបានត្រឹមត្រូវ។
+អ្នកគឺជាអ្នកសម្រាយរឿង និងបកប្រែវីដេអូអាជីព។
+សូមស្ដាប់សំឡេង/វីដេអូនេះ (ភាសាដើម៖ {lang}) ហើយធ្វើការឆ្លើយតបជា ២ ផ្នែកដូចខាងក្រោម៖
+
+---TRANSCRIPT---
+(សរសេរអត្ថបទដើមដែលស្ដាប់បានពីសំឡេងក្នុងវីដេអូជាភាសា {lang})
+
+---KHMER_SCRIPT---
+(បកប្រែ និងរៀបចំអត្ថបទខាងលើជា "ភាសាខ្មែរ" តាមទម្រង់/ស្ទីល៖ {style} ឱ្យមានន័យពិរោះ ស្ទាត់ និងទាក់ទាញ)
 """
 
-        last_error = None
+        # Generate Response
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=[uploaded_file, prompt]
+        )
 
-        for api_key in keys_to_try:
-            key_clean = api_key.strip()
-            if not key_clean:
-                continue
+        full_text = response.text or ""
 
-            uploaded_file = None
-            try:
-                # ប្រើ Client នៃ google-genai សម្រាប់ Key AQ.
-                client = genai.Client(api_key=key_clean)
-                
-                # Upload File
-                uploaded_file = client.files.upload(file=temp_path)
+        # បំបែកចេញជា ២ ផ្នែក (Transcript និង Khmer Script)
+        transcript = ""
+        khmer_script = ""
 
-                # ហៅ Model ដំណើរការបកប្រែ
-                response = client.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=[uploaded_file, prompt]
-                )
+        if "---TRANSCRIPT---" in full_text and "---KHMER_SCRIPT---" in full_text:
+            parts = full_text.split("---KHMER_SCRIPT---")
+            transcript = parts[0].replace("---TRANSCRIPT---", "").strip()
+            khmer_script = parts[1].strip()
+        else:
+            khmer_script = full_text
 
-                # លុប File ចោលវិញ
-                try:
-                    client.files.delete(name=uploaded_file.name)
-                except Exception:
-                    pass
-
-                return jsonify({'translated_text': response.text})
-
-            except Exception as e:
-                last_error = str(e)
-                if uploaded_file and 'client' in locals():
-                    try:
-                        client.files.delete(name=uploaded_file.name)
-                    except Exception:
-                        pass
-                continue
-
-        return jsonify({'error': f'កំហុសក្នុងការប្រើប្រាស់ API Key៖ {last_error}'}), 500
+        return jsonify({
+            'transcript': transcript,
+            'khmer_script': khmer_script
+        })
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
     finally:
+        # Clean up files
+        if uploaded_file and 'client' in locals():
+            try:
+                client.files.delete(name=uploaded_file.name)
+            except Exception:
+                pass
         if temp_path and os.path.exists(temp_path):
             os.remove(temp_path)
 
