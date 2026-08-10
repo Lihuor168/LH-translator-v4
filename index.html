@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Khmer Auto Video Dubbing</title>
+    <title>Khmer AI Video Dubbing</title>
     <style>
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Kantumruy Pro', 'Siemreap', sans-serif, -apple-system, BlinkMacSystemFont;
+            font-family: 'Kantumruy Pro', 'Siemreap', sans-serif, -apple-system;
         }
 
         body {
@@ -18,13 +18,12 @@
             padding: 20px 10px;
             display: flex;
             justify-content: center;
-            align-items: center;
             min-height: 100vh;
         }
 
         .container {
             width: 100%;
-            max-width: 520px;
+            max-width: 540px;
             display: flex;
             flex-direction: column;
             gap: 16px;
@@ -33,30 +32,30 @@
         .header-card {
             background: linear-gradient(135deg, #2563eb, #1d4ed8);
             color: white;
-            padding: 22px;
+            padding: 20px;
             border-radius: 16px;
             box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.3);
             text-align: center;
         }
 
         .header-card h1 {
-            font-size: 22px;
-            margin-bottom: 6px;
+            font-size: 20px;
+            margin-bottom: 4px;
         }
 
         .header-card p {
-            font-size: 13px;
+            font-size: 12px;
             opacity: 0.9;
         }
 
         .card {
             background: white;
-            padding: 20px;
+            padding: 18px;
             border-radius: 16px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.04);
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 14px;
         }
 
         .card-title {
@@ -68,19 +67,20 @@
             gap: 8px;
         }
 
+        .step-badge {
+            background: #2563eb;
+            color: white;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 20px;
+        }
+
         .file-input-box {
             border: 2px dashed #cbd5e1;
             border-radius: 12px;
-            padding: 16px;
+            padding: 14px;
             background: #f8fafc;
             text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .file-input-box:hover {
-            border-color: #2563eb;
-            background: #eff6ff;
         }
 
         input[type="file"] {
@@ -92,23 +92,25 @@
             font-size: 13px;
             font-weight: 600;
             color: #475569;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
             display: block;
         }
 
-        select, input[type="text"] {
+        select, input[type="text"], textarea {
             width: 100%;
-            padding: 12px;
+            padding: 10px 12px;
             border: 1px solid #cbd5e1;
             border-radius: 10px;
             font-size: 13px;
             background-color: white;
             outline: none;
-            transition: border 0.2s;
         }
 
-        select:focus, input[type="text"]:focus {
-            border-color: #2563eb;
+        textarea {
+            height: 180px;
+            font-family: monospace;
+            line-height: 1.5;
+            resize: vertical;
         }
 
         .key-input-group {
@@ -120,7 +122,7 @@
             background: #10b981;
             color: white;
             border: none;
-            padding: 0 16px;
+            padding: 0 14px;
             border-radius: 10px;
             font-weight: bold;
             font-size: 13px;
@@ -131,9 +133,9 @@
         .key-list {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
             margin-top: 8px;
-            max-height: 120px;
+            max-height: 100px;
             overflow-y: auto;
         }
 
@@ -142,7 +144,7 @@
             justify-content: space-between;
             align-items: center;
             background: #f1f5f9;
-            padding: 8px 12px;
+            padding: 6px 10px;
             border-radius: 8px;
             font-size: 12px;
         }
@@ -151,57 +153,57 @@
             background: #ef4444;
             color: white;
             border: none;
-            padding: 4px 8px;
+            padding: 3px 6px;
             border-radius: 6px;
             cursor: pointer;
             font-size: 11px;
         }
 
-        .btn-submit {
+        .btn-primary {
             background: #2563eb;
             color: white;
             border: none;
-            padding: 14px;
-            border-radius: 12px;
-            font-size: 15px;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 14px;
             font-weight: bold;
             cursor: pointer;
-            transition: background 0.2s;
         }
 
-        .btn-submit:hover {
-            background: #1d4ed8;
+        .btn-success {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
         }
 
-        .btn-submit:disabled {
-            background: #94a3b8;
+        button:disabled {
+            background: #94a3b8 !important;
             cursor: not-allowed;
         }
 
         video {
             width: 100%;
             border-radius: 12px;
-            margin-top: 10px;
+            margin-top: 8px;
             background: #000;
         }
 
         .btn-download {
             background: #10b981;
             color: white;
-            border: none;
             padding: 12px;
             border-radius: 10px;
             font-weight: bold;
             font-size: 14px;
-            cursor: pointer;
             text-align: center;
             text-decoration: none;
             display: block;
-            margin-top: 12px;
-        }
-
-        .btn-download:hover {
-            background: #059669;
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -209,23 +211,29 @@
 
 <div class="container">
     <div class="header-card">
-        <h1>🎬 Khmer AI Video Dubber</h1>
-        <p>បំប្លែង • បកប្រែតាម Timeline • បញ្ចូលសំឡេងខ្មែរ Auto</p>
+        <h1>🎬 Khmer AI Video Dubbing</h1>
+        <p>បកប្រែជាអត្ថបទ Timeline ➔ កែសម្រួល ➔ បង្កើតសំឡេងខ្មែរ</p>
     </div>
 
-    <form id="dubForm" class="card">
+    <!-- STEP 1: Upload Video & Get Subtitle -->
+    <div class="card">
+        <div class="card-title">
+            <span class="step-badge">ជំហានទី ១</span>
+            <span>📤 Upload វីដេអូ & បកប្រែជា Timeline (SRT)</span>
+        </div>
+
         <div>
-            <div class="card-title">📤 ជ្រើសរើស File វីដេអូ</div>
-            <div class="file-input-box" style="margin-top: 8px;">
+            <label>ជ្រើសរើស File វីដេអូ</label>
+            <div class="file-input-box">
                 <input type="file" id="videoFile" accept="video/*" required>
             </div>
         </div>
 
         <div>
-            <label>🌐 ភាសាដើមនៃវីដេអូ</label>
+            <label>🌐 ភាសាដើម</label>
             <select id="sourceLang">
-                <option value="Chinese" selected>Chinese (ចិន)</option>
-                <option value="English">English (អង់គ្លេស)</option>
+                <option value="English" selected>English (អង់គ្លេស)</option>
+                <option value="Chinese">Chinese (ចិន)</option>
                 <option value="Thai">Thai (ថៃ)</option>
                 <option value="Korean">Korean (កូរ៉េ)</option>
             </select>
@@ -249,13 +257,31 @@
             <div class="key-list" id="keyListDisplay"></div>
         </div>
 
-        <button type="submit" id="submitBtn" class="btn-submit">
-            🎙️ បង្កើតសំឡេង & បញ្ចូលវីដេអូ
+        <button type="button" id="btnTranslate" class="btn-primary" onclick="step1Translate()">
+            📝 1. ស្ដាប់សំឡេង & បង្កើតអត្ថបទ Timeline
         </button>
-    </form>
+    </div>
 
+    <!-- STEP 2: Review/Edit Text & Render Video -->
+    <div class="card" id="step2Card" style="display: none;">
+        <div class="card-title">
+            <span class="step-badge" style="background: #10b981;">ជំហានទី ២</span>
+            <span>📝 ពិនិត្យ/កែសម្រួល Timeline & បង្កើតសំឡេង</span>
+        </div>
+
+        <div>
+            <label>អត្ថបទបកប្រែខ្មែរ (អាចកែប្រែពាក្យពេចន៍បាន)៖</label>
+            <textarea id="khmerSrtText" placeholder="អត្ថបទ SRT នឹងបង្ហាញនៅទីនេះ..."></textarea>
+        </div>
+
+        <button type="button" id="btnDub" class="btn-success" onclick="step2DubVideo()">
+            🎙️ 2. បង្កើតសំឡេង & បញ្ចូលក្នុងវីដេអូ
+        </button>
+    </div>
+
+    <!-- RESULT SECTION -->
     <div class="card" id="resultCard" style="display: none;">
-        <div class="card-title">🎉 វីដេអូបកប្រែ និងបញ្ចូលសំឡេងខ្មែររួចរាល់</div>
+        <div class="card-title">🎉 វីដេអូបកប្រែ និងបញ្ចូលសំឡេងរួចរាល់</div>
         <video id="videoPreview" controls></video>
         <a id="downloadBtn" class="btn-download" download="Dubbed_Khmer_Video.mp4">📥 ទាញយក File MP4</a>
     </div>
@@ -298,16 +324,13 @@
         renderKeyList();
     }
 
-    document.getElementById('dubForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-
+    async function step1Translate() {
         const fileInput = document.getElementById('videoFile');
-        const submitBtn = document.getElementById('submitBtn');
-        const resultCard = document.getElementById('resultCard');
-        const videoPreview = document.getElementById('videoPreview');
-        const downloadBtn = document.getElementById('downloadBtn');
+        const btn = document.getElementById('btnTranslate');
+        const step2Card = document.getElementById('step2Card');
+        const khmerSrtText = document.getElementById('khmerSrtText');
 
-        if (!fileInput.files[0]) return alert("សូមជ្រើសរើស File វីដេអូជាមុនសិន!");
+        if (!fileInput.files[0]) return alert("សូមជ្រើសរើស File វីដេអូ!");
 
         const formData = new FormData();
         formData.append('file', fileInput.files[0]);
@@ -315,33 +338,73 @@
         formData.append('style', document.getElementById('scriptStyle').value);
         formData.append('api_key', savedKeys.join(','));
 
-        submitBtn.disabled = true;
-        submitBtn.innerText = "⏳ កំពុងដំណើរការបកប្រែ និងបញ្ចូលសំឡេង (អាចប្រែប្រួលតាមទំហំវីដេអូ)...";
-        resultCard.style.display = 'none';
+        btn.disabled = true;
+        btn.innerText = "⏳ កំពុងបំប្លែង និងបកប្រែជាអត្ថបទ Timeline...";
 
         try {
-            const response = await fetch('/process-video-dubbing', {
+            const res = await fetch('/get-srt-translation', {
                 method: 'POST',
                 body: formData
             });
 
-            if (response.ok) {
-                const videoBlob = await response.blob();
+            const data = await res.json();
+            if (res.ok) {
+                khmerSrtText.value = data.khmer_srt;
+                step2Card.style.display = 'flex';
+                step2Card.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                alert("Error: " + (data.error || "មិនអាចបកប្រែបានទេ"));
+            }
+        } catch (e) {
+            alert("Exception: " + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "📝 1. ស្ដាប់សំឡេង & បង្កើតអត្ថបទ Timeline";
+        }
+    }
+
+    async function step2DubVideo() {
+        const fileInput = document.getElementById('videoFile');
+        const btn = document.getElementById('btnDub');
+        const khmerSrtText = document.getElementById('khmerSrtText');
+        const resultCard = document.getElementById('resultCard');
+        const videoPreview = document.getElementById('videoPreview');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        if (!khmerSrtText.value.trim()) return alert("មិនមានអត្ថបទ Subtitle ទេ!");
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        formData.append('khmer_srt', khmerSrtText.value);
+
+        btn.disabled = true;
+        btn.innerText = "⏳ កំពុងបង្កើតសំឡេងនិយាយ និងតម្រៀបចូលវីដេអូ...";
+        resultCard.style.display = 'none';
+
+        try {
+            const res = await fetch('/render-dubbed-video', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (res.ok) {
+                const videoBlob = await res.blob();
                 const videoUrl = URL.createObjectURL(videoBlob);
                 videoPreview.src = videoUrl;
                 downloadBtn.href = videoUrl;
                 resultCard.style.display = 'flex';
+                resultCard.scrollIntoView({ behavior: 'smooth' });
             } else {
-                const errData = await response.json();
-                alert("កំហុសឆ្គង: " + (errData.error || "មិនអាចដំណើរការបានឡើយ"));
+                const errData = await res.json();
+                alert("Error: " + (errData.error || "មិនអាចបង្កើតវីដេអូបានទេ"));
             }
-        } catch (err) {
-            alert("Exception Error: " + err.message);
+        } catch (e) {
+            alert("Exception: " + e.message);
         } finally {
-            submitBtn.disabled = false;
-            submitBtn.innerText = "🎙️ បង្កើតសំឡេង & បញ្ចូលវីដេអូ";
+            btn.disabled = false;
+            btn.innerText = "🎙️ 2. បង្កើតសំឡេង & បញ្ចូលក្នុងវីដេអូ";
         }
-    });
+    }
 </script>
 
 </body>
