@@ -11,6 +11,7 @@ document.getElementById('upload-form').addEventListener('submit', async function
 
     const fileInput = document.getElementById('media-file');
     const sourceLang = document.getElementById('source-lang').value;
+    const customApiKey = document.getElementById('custom-api-key').value;
     const submitBtn = document.getElementById('submit-btn');
     const loading = document.getElementById('loading');
     const resultBox = document.getElementById('result-box');
@@ -24,6 +25,7 @@ document.getElementById('upload-form').addEventListener('submit', async function
     const formData = new FormData();
     formData.append('file', fileInput.files[0]);
     formData.append('lang', sourceLang);
+    formData.append('api_key', customApiKey);
 
     submitBtn.disabled = true;
     loading.classList.remove('hidden');
