@@ -1,7 +1,7 @@
 import os
 import tempfile
 from flask import Flask, request, jsonify, send_from_directory
-import google.generativeai as genai
+from openai import OpenAI
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 
@@ -27,74 +27,61 @@ def translate_video():
         return jsonify({'error': 'សូមជ្រើសរើស File'}), 400
 
     # យក API Key ពី Input ឬ Environment Variable
-    api_key = custom_key or os.getenv("GEMINI_API_KEY", "").strip()
+    api_key = custom_key or os.getenv("OPENAI_API_KEY", "").strip()
 
     if not api_key:
-        return jsonify({'error': 'មិនទាន់មាន API Key ទេ! សូមបញ្ចូល Key ឬដាក់ក្នុង Render Environment'}), 400
+        return jsonify({'error': 'មិនទាន់មាន OpenAI API Key ទេ! សូមបញ្ចូល Key (ផ្តើមដោយ sk-...)'}), 400
 
     temp_path = None
-    uploaded_file = None
     try:
-        # Save temp file
+        # Save temporary file
         suffix = os.path.splitext(file.filename)[1]
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             file.save(tmp.name)
             temp_path = tmp.name
 
-        # Configure API Key
-        genai.configure(api_key=api_key)
+        client = OpenAI(api_key=api_key)
 
-        # Upload file ទៅ Google Gemini API
-        uploaded_file = genai.upload_file(path=temp_path)
+        # ជំហានទី ១៖ ប្រើ Whisper ដើម្បី Extract Transcript
+        with open(temp_path, "rb") as audio_file:
+            transcript_res = client.audio.transcriptions.create(
+                model="whisper-1", 
+                file=audio_file
+            )
+        
+        transcript_text = transcript_res.text
 
-        # Prompt
+        # ជំហានទី ២៖ ប្រើ GPT-4o-mini បកប្រែជាស្គ្រីបខ្មែរ
         prompt = f"""
 អ្នកគឺជាអ្នកសម្រាយរឿង និងបកប្រែវីដេអូអាជីព។
-សូមស្ដាប់សំឡេង/វីដេអូនេះ (ភាសាដើម៖ {lang}) ហើយធ្វើការឆ្លើយតបជា ២ ផ្នែកដូចខាងក្រោម៖
+ខាងក្រោមនេះជា Transcript ដើម (ភាសា {lang})៖
+"{transcript_text}"
 
----TRANSCRIPT---
-(សរសេរអត្ថបទដើមដែលស្ដាប់បានពីសំឡេងក្នុងវីដេអូជាភាសា {lang})
-
----KHMER_SCRIPT---
-(បកប្រែ និងរៀបចំអត្ថបទខាងលើជា "ភាសាខ្មែរ" តាមទម្រង់/ស្ទីល៖ {style} ឱ្យមានន័យពិរោះ ស្ទាត់ និងទាក់ទាញ)
+សូមបកប្រែ និងរៀបចំអត្ថបទខាងលើជា "ភាសាខ្មែរ" តាមទម្រង់/ស្ទីល៖ {style} ឱ្យមានន័យពិរោះ ស្ទាត់ ទាក់ទាញ និងសមស្របតាមសាច់រឿង។
 """
 
-        # ប្រើ Model 'gemini-1.5-flash' ដែលជា Standard និងលឿនបំផុត
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        response = model.generate_content([uploaded_file, prompt])
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are an expert translator and scriptwriter for YouTube videos."},
+                {"role": "user", "content": prompt}
+            ]
+        )
 
-        full_text = response.text or ""
-
-        # បំបែកចេញជា ២ ផ្នែក (Transcript និង Khmer Script)
-        transcript = ""
-        khmer_script = ""
-
-        if "---TRANSCRIPT---" in full_text and "---KHMER_SCRIPT---" in full_text:
-            parts = full_text.split("---KHMER_SCRIPT---")
-            transcript = parts[0].replace("---TRANSCRIPT---", "").strip()
-            khmer_script = parts[1].strip()
-        else:
-            khmer_script = full_text
+        khmer_script = completion.choices[0].message.content
 
         return jsonify({
-            'transcript': transcript,
+            'transcript': transcript_text,
             'khmer_script': khmer_script
         })
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': f'OpenAI Error: {str(e)}'}), 500
 
     finally:
-        # Clean up files
-        if uploaded_file:
-            try:
-                genai.delete_file(uploaded_file.name)
-            except Exception:
-                pass
         if temp_path and os.path.exists(temp_path):
             os.remove(temp_path)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
-    
