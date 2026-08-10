@@ -5,9 +5,10 @@ from google import genai
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 
-# 🔑 បញ្ចូល API Keys របស់អ្នកនៅទីនេះ (អាចប្រើ Key ទ្រង់ទ្រាយ AQ... ឬ AIza...)
+# 🔑 បញ្ចូល Gemini API Key (AQ...) របស់អ្នកនៅទីនេះ (អាចដាក់ច្រើនបាន)
 DEFAULT_API_KEYS = [
-    "AQ.Ab8RN6Lv...", # បញ្ចូល Key របស់អ្នកដែលផ្តើមដោយ AQ...
+    "AQ.Ab8RN6Lv...", # បិទ Key AQ. របស់អ្នកទី១ នៅទីនេះ
+    "AQ.Ab8RN6Lv...", # បិទ Key AQ. របស់អ្នកទី២ (បើមាន)
 ]
 
 LANG_MAP = {
@@ -40,12 +41,12 @@ def translate_video():
     if file.filename == '':
         return jsonify({'error': 'សូមជ្រើសរើស File'}), 400
 
-    # រៀបចំបញ្ជី Keys ត្រូវប្រើ
+    # រៀបចំ List API Key
     keys_to_try = []
     if custom_key:
         keys_to_try.append(custom_key)
     
-    env_key = os.getenv("GEMINI_API_KEY")
+    env_key = os.getenv("GEMINI_API_KEY", "").strip()
     if env_key:
         keys_to_try.append(env_key)
         
@@ -53,6 +54,7 @@ def translate_video():
 
     temp_path = None
     try:
+        # បង្កើត Temp file
         suffix = os.path.splitext(file.filename)[1]
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             file.save(tmp.name)
@@ -75,13 +77,13 @@ def translate_video():
 
             uploaded_file = None
             try:
-                # ប្រើ SDK ថ្មីទើបគាំទ្រ Key ទ្រង់ទ្រាយ AQ...
+                # ប្រើ Client នៃ google-genai សម្រាប់ Key AQ.
                 client = genai.Client(api_key=key_clean)
                 
-                # Upload File ទៅ Gemini
+                # Upload File
                 uploaded_file = client.files.upload(file=temp_path)
 
-                # ហៅ Gemini 2.5 Flash
+                # ហៅ Model ដំណើរការបកប្រែ
                 response = client.models.generate_content(
                     model='gemini-2.5-flash',
                     contents=[uploaded_file, prompt]
