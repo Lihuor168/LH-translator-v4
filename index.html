@@ -3,55 +3,324 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Video & Audio Translator</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Khmer Story Translator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Kantumruy Pro', 'Siemreap', sans-serif, -apple-system;
+        }
+
+        body {
+            background-color: #f4f6f9;
+            color: #333;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* Top Header Card */
+        .header-card {
+            background: linear-gradient(135deg, #1d4ed8, #2563eb);
+            color: white;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        }
+
+        .header-card h1 {
+            font-size: 22px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-card p {
+            font-size: 13px;
+            opacity: 0.9;
+            line-height: 1.4;
+        }
+
+        /* Form Card */
+        .card {
+            background: white;
+            padding: 18px;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .card-title {
+            font-size: 15px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #1e293b;
+        }
+
+        .file-input-box {
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 10px;
+            background: #f8fafc;
+        }
+
+        input[type="file"] {
+            width: 100%;
+            font-size: 13px;
+        }
+
+        .sub-text {
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        select, input[type="text"] {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            font-size: 14px;
+            background-color: white;
+            outline: none;
+        }
+
+        select:focus, input[type="text"]:focus {
+            border-color: #2563eb;
+        }
+
+        .btn-submit {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            transition: 0.2s;
+        }
+
+        .btn-submit:hover {
+            background: #1d4ed8;
+        }
+
+        .btn-submit:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        /* Output Box */
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            font-size: 13px;
+            resize: vertical;
+            outline: none;
+            line-height: 1.5;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-action {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+
+        .btn-action:hover {
+            background: #e2e8f0;
+        }
+
+        .footer-note {
+            font-size: 11px;
+            color: #64748b;
+            text-align: center;
+            margin-top: 5px;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🎬 AI Video & Audio Translator (ខ្មែរ)</h1>
-        <p class="subtitle">បញ្ចូលវីដេអូ ឬសំឡេង ដើម្បីបកប្រែជាអត្ថបទខ្មែរ</p>
 
-        <form id="upload-form">
-            <!-- 🔑 កន្លែងបញ្ចូល Custom API Key (Option) -->
-            <div class="input-group">
-                <label for="custom-api-key">🔑 Gemini API Key (ជម្រើសបន្ថែម / Optional)៖</label>
-                <input type="password" id="custom-api-key" placeholder="បញ្ជូល API Key របស់អ្នកនៅទីនេះ (បើគ្មានទេ ទុកទំនេរបាន)">
+<div class="container">
+    <!-- Header -->
+    <div class="header-card">
+        <h1>🎬 Khmer Story Translator</h1>
+        <p>V3 Mobile Cloud • Video ➔ AI Transcript ➔ Khmer Script</p>
+    </div>
+
+    <!-- Upload & Config Form -->
+    <form id="transForm" class="card">
+        <div>
+            <div class="card-title">📤 បញ្ចូលវីដេអូ</div>
+            <div class="file-input-box" style="margin-top: 8px;">
+                <input type="file" id="videoFile" accept="video/*,audio/*" required>
             </div>
-
-            <div class="upload-area">
-                <label for="media-file" class="file-label">
-                    <span>📁 ចុចជ្រើសរើស File វីដេអូ/សំឡេង (MP4, MP3, WAV...)</span>
-                    <input type="file" id="media-file" accept="video/*,audio/*" required onchange="showFileName()">
-                </label>
-                <p id="file-name-display"></p>
-            </div>
-
-            <div class="controls">
-                <label for="source-lang">ភាសាក្នុងវីដេអូ៖</label>
-                <select id="source-lang">
-                    <option value="th">ថៃ (Thai)</option>
-                    <option value="en">អង់គ្លេស (English)</option>
-                    <option value="ko">កូរ៉េ (Korean)</option>
-                    <option value="ja">ជប៉ុន (Japanese)</option>
-                    <option value="zh">ចិន (Chinese)</option>
-                    <option value="vi">វៀតណាម (Vietnamese)</option>
-                </select>
-            </div>
-
-            <button type="submit" id="submit-btn">🚀 ចាប់ផ្តើមបកប្រែ</button>
-        </form>
-
-        <div id="loading" class="hidden">
-            <p>កំពុង Upload និងបកប្រែដោយ AI... សូមរង់ចាំបន្តិច ⏳</p>
+            <div class="sub-text" style="margin-top: 6px;">អតិបរមា 25 MB សម្រាប់ V3 ដំបូង</div>
         </div>
 
-        <div id="result-box" class="hidden">
-            <h3>📝 លទ្ធផលបកប្រែជាភាសាខ្មែរ៖</h3>
-            <textarea id="output-text" readonly rows="12"></textarea>
-            <button id="copy-btn" onclick="copyResult()">📋 ចម្លងអត្ថបទ</button>
+        <div>
+            <label>🌐 ភាសាដើម</label>
+            <select id="sourceLang">
+                <option value="Chinese" selected>Chinese</option>
+                <option value="Thai">Thai</option>
+                <option value="English">English</option>
+                <option value="Korean">Korean</option>
+                <option value="Japanese">Japanese</option>
+                <option value="Vietnamese">Vietnamese</option>
+            </select>
+        </div>
+
+        <div>
+            <label>🎙️ ស្ទីល</label>
+            <select id="scriptStyle">
+                <option value="សម្រាយរឿង YouTube" selected>សម្រាយរឿង YouTube</option>
+                <option value="រឿងនិទាន / និយាយប្រាប់">រឿងនិទាន / និយាយប្រាប់</option>
+                <option value="បកប្រែពាក្យផ្ទាល់ (Direct)">បកប្រែពាក្យផ្ទាល់ (Direct)</option>
+            </select>
+        </div>
+
+        <div>
+            <label>🔑 Gemini API Key (ជម្រើស)</label>
+            <input type="text" id="apiKey" placeholder="បិទ API Key ទីនេះ បើមិនបានដាក់ក្នុង Render">
+        </div>
+
+        <button type="submit" id="submitBtn" class="btn-submit">
+            🚀 AI បកប្រែវីដេអូ
+        </button>
+    </form>
+
+    <!-- Transcript Box -->
+    <div class="card">
+        <div class="card-title">📝 Transcript</div>
+        <textarea id="transcriptBox" placeholder="Transcript នឹងបង្ហាញនៅទីនេះ..." readonly></textarea>
+    </div>
+
+    <!-- Khmer Script Box -->
+    <div class="card">
+        <div class="card-title">🇰🇭 ស្គ្រីបខ្មែរ</div>
+        <textarea id="khmerScriptBox" placeholder="ស្គ្រីបខ្មែរ នឹងបង្ហាញនៅទីនេះ..."></textarea>
+        
+        <div class="btn-group">
+            <button class="btn-action" onclick="copyScript()">📋 Copy</button>
+            <button class="btn-action" onclick="downloadTXT()">📥 TXT</button>
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <div class="footer-note">
+        🔐 API Key រក្សាទុកនៅ Render Environment មិនដាក់ក្នុង Browser/GitHub
+    </div>
+</div>
+
+<script>
+    document.getElementById('transForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const fileInput = document.getElementById('videoFile');
+        const lang = document.getElementById('sourceLang').value;
+        const style = document.getElementById('scriptStyle').value;
+        const apiKey = document.getElementById('apiKey').value;
+        const submitBtn = document.getElementById('submitBtn');
+        const transcriptBox = document.getElementById('transcriptBox');
+        const khmerScriptBox = document.getElementById('khmerScriptBox');
+
+        if (!fileInput.files[0]) {
+            alert("សូមជ្រើសរើស File ជាមុនសិន!");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        formData.append('lang', lang);
+        formData.append('style', style);
+        formData.append('api_key', apiKey);
+
+        submitBtn.disabled = true;
+        submitBtn.innerText = "កំពុង Upload និងដំណើរការដោយ AI... ⏳";
+        transcriptBox.value = "កំពុងស្ដាប់ និងទាញយក Transcript...";
+        khmerScriptBox.value = "កំពុងបកប្រែ និងសរសេរស្គ្រីបខ្មែរ...";
+
+        try {
+            const response = await fetch('/translate-video', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                transcriptBox.value = data.transcript || "មិនមាន Transcript ទេ";
+                khmerScriptBox.value = data.khmer_script || "មិនមានស្គ្រីបខ្មែរទេ";
+            } else {
+                alert("មានបញ្ហា៖ " + (data.error || "កំហុសមិនស្គាល់"));
+                transcriptBox.value = "";
+                khmerScriptBox.value = "";
+            }
+        } catch (err) {
+            alert("Error: " + err.message);
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerText = "🚀 AI បកប្រែវីដេអូ";
+        }
+    });
+
+    function copyScript() {
+        const scriptBox = document.getElementById('khmerScriptBox');
+        if (!scriptBox.value) return;
+        scriptBox.select();
+        document.execCommand('copy');
+        alert('បាន Copy ស្គ្រីបខ្មែររួចរាល់!');
+    }
+
+    function downloadTXT() {
+        const text = document.getElementById('khmerScriptBox').value;
+        if (!text) return;
+        const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'Khmer_Script.txt';
+        a.click();
+    }
+</script>
+
 </body>
 </html>
