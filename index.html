@@ -12,6 +12,12 @@
         <p class="subtitle">បញ្ចូលវីដេអូ ឬសំឡេង ដើម្បីបកប្រែជាអត្ថបទខ្មែរ</p>
 
         <form id="upload-form">
+            <!-- 🔑 កន្លែងបញ្ចូល Custom API Key (Option) -->
+            <div class="input-group">
+                <label for="custom-api-key">🔑 Gemini API Key (ជម្រើសបន្ថែម / Optional)៖</label>
+                <input type="password" id="custom-api-key" placeholder="បញ្ជូល API Key របស់អ្នកនៅទីនេះ (បើគ្មានទេ ទុកទំនេរបាន)">
+            </div>
+
             <div class="upload-area">
                 <label for="media-file" class="file-label">
                     <span>📁 ចុចជ្រើសរើស File វីដេអូ/សំឡេង (MP4, MP3, WAV...)</span>
@@ -36,7 +42,6 @@
         </form>
 
         <div id="loading" class="hidden">
-            <div class="spinner"></div>
             <p>កំពុង Upload និងបកប្រែដោយ AI... សូមរង់ចាំបន្តិច ⏳</p>
         </div>
 
