@@ -1,7 +1,7 @@
 import os
 import tempfile
 from flask import Flask, request, jsonify, send_from_directory
-from openai import OpenAI
+from groq import Groq
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 
@@ -27,10 +27,10 @@ def translate_video():
         return jsonify({'error': 'សូមជ្រើសរើស File'}), 400
 
     # យក API Key ពី Input ឬ Environment Variable
-    api_key = custom_key or os.getenv("OPENAI_API_KEY", "").strip()
+    api_key = custom_key or os.getenv("GROQ_API_KEY", "").strip()
 
     if not api_key:
-        return jsonify({'error': 'មិនទាន់មាន OpenAI API Key ទេ! សូមបញ្ចូល Key (ផ្តើមដោយ sk-...)'}), 400
+        return jsonify({'error': 'មិនទាន់មាន Groq API Key ទេ! សូមបញ្ចូល Key (ផ្តើមដោយ gsk_...)'}), 400
 
     temp_path = None
     try:
@@ -40,18 +40,18 @@ def translate_video():
             file.save(tmp.name)
             temp_path = tmp.name
 
-        client = OpenAI(api_key=api_key)
+        client = Groq(api_key=api_key)
 
-        # ជំហានទី ១៖ ប្រើ Whisper ដើម្បី Extract Transcript
+        # ជំហានទី ១៖ ប្រើ Whisper Large V3 (Free) ដើម្បី Extract Transcript
         with open(temp_path, "rb") as audio_file:
             transcript_res = client.audio.transcriptions.create(
-                model="whisper-1", 
-                file=audio_file
+                model="whisper-large-v3",
+                file=(os.path.basename(temp_path), audio_file.read())
             )
         
         transcript_text = transcript_res.text
 
-        # ជំហានទី ២៖ ប្រើ GPT-4o-mini បកប្រែជាស្គ្រីបខ្មែរ
+        # ជំហានទី ២៖ ប្រើ Llama 3 70B (Free) បកប្រែជាស្គ្រីបខ្មែរ
         prompt = f"""
 អ្នកគឺជាអ្នកសម្រាយរឿង និងបកប្រែវីដេអូអាជីព។
 ខាងក្រោមនេះជា Transcript ដើម (ភាសា {lang})៖
@@ -61,9 +61,9 @@ def translate_video():
 """
 
         completion = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": "You are an expert translator and scriptwriter for YouTube videos."},
+                {"role": "system", "content": "You are an expert translator and scriptwriter for YouTube videos. Respond in Khmer."},
                 {"role": "user", "content": prompt}
             ]
         )
@@ -76,7 +76,7 @@ def translate_video():
         })
 
     except Exception as e:
-        return jsonify({'error': f'OpenAI Error: {str(e)}'}), 500
+        return jsonify({'error': f'Groq Error: {str(e)}'}), 500
 
     finally:
         if temp_path and os.path.exists(temp_path):
@@ -85,3 +85,4 @@ def translate_video():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
+    
